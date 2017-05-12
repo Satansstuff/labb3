@@ -1,15 +1,46 @@
 .data
+/*
 @ Vi behöver två stycken bufrar här. En för inmatning och en för utmatning + ett index
+*/
+
+MAXPOS: .quad 128
+
+inbuffer: .space 128
+outbuffer: .space 128
+
+inindex: .quad 0
+outindex: .quad 0
+
+
 .text
 
-inImage:
+/*
+howto x64
+registers RCX, RDX, R8, R9 for the first four integer or pointer arguments in that order
+registers RAX, RCX, RDX, R8, R9, R10, R11 are considered volatile, scratch
+registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered nonvolatile
+*/
+
+/*
 @Rutinen ska läsa in en ny textrad från tangentbordet till er inmatningsbuffert för indata
 @och nollställa den aktuella positionen i den. De andra inläsningsrutinerna kommer sedan att
 @jobba mot den här bufferten. Om inmatningsbufferten är tom eller den aktuella positionen
 @är vid buffertens slut när någon av de andra inläsningsrutinerna nedan anropas ska inImage
 @anropas av den rutinen, så att det alltid finns ny data att arbeta med.
+*/
+.global main
+main:
 
-
+inImage:
+	movq $inbuffer, %rdi
+	movq (MAXPOS), %rsi
+	movq stdin, %rdx
+	call fgets
+	movq $inbuffer, %rdi
+	call printf
+	/*popq %rax
+	ret
+/*
 getInt:
 @Rutinen ska tolka en sträng som börjar på aktuell buffertposition i inbufferten och fortsätta
 @tills ett tecken som inte kan ingå i ett heltal påträffas. Den lästa substrängen översätts till
@@ -85,3 +116,4 @@ setOutPos:
 @[0,MAXPOS], där MAXPOS beror av utbuffertens storlek. Om n<0 sätt den till 0, om
 @n>MAXPOS sätt den till MAXPOS.
 @Parameter: önskad aktuell buffertposition (index), n i texten
+*/
