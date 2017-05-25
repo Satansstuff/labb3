@@ -5,6 +5,8 @@
 
 MAXPOS: .quad 128
 
+debug: .asciz "asd %d\n"
+
 inbuffer: .space 128
 outbuffer: .space 128
 
@@ -13,6 +15,10 @@ outindex: .quad 0
 
 
 .text
+
+
+
+
 
 /*
 howto x64
@@ -28,20 +34,15 @@ registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered nonvola
 @är vid buffertens slut när någon av de andra inläsningsrutinerna nedan anropas ska inImage
 @anropas av den rutinen, så att det alltid finns ny data att arbeta med.
 */
-.global main
-main:
-
 inImage:
 	movq $inbuffer, %rdi
-	movq (MAXPOS), %rsi
+	movq MAXPOS, %rsi
 	movq stdin, %rdx
 	call fgets
-	movq $inbuffer, %rdi
-	call printf
-	/*popq %rax
+	movq $0, inindex
 	ret
+
 /*
-getInt:
 @Rutinen ska tolka en sträng som börjar på aktuell buffertposition i inbufferten och fortsätta
 @tills ett tecken som inte kan ingå i ett heltal påträffas. Den lästa substrängen översätts till
 @heltalsformat och returneras. Positionen i bufferten ska vara det första tecken som inte
@@ -52,9 +53,17 @@ getInt:
 @är vid dess slut vid anrop av getInt ska getInt kalla på inImage, så att getInt alltid
 @returnerar värdet av ett inmatat tal.
 @Returvärde: inläst heltal
+*/
+getInt:
+	
+
+
+
+
 
 
 getText:
+/*
 @Rutinen ska överföra maximalt n tecken från aktuell position i inbufferten och framåt till
 @minnesplats med början vid buf. När rutinen lämnas ska aktuell position i inbufferten vara
 @första tecknet efter den överförda strängen. Om det inte finns n st. tecken kvar i inbufferten
@@ -74,16 +83,30 @@ getChar:
 @kalla på inImage, så att getChar alltid returnerar ett tecken ur inmatningsbufferten.
 @Returvärde: inläst tecken
 
-getInPos:
+/*
 @Rutinen ska returnera aktuell buffertposition för inbufferten.
 @Returvärde: aktuell buffertposition (index)
-
-setInPos:
+*/
+getInPos:
+	movq inindex, %rax
+	ret
+/*
 @Rutinen ska sätta aktuell buffertposition för inbufferten till n. n måste dock ligga i intervallet
 @[0,MAXPOS], där MAXPOS beror av buffertens faktiska storlek. Om n<0, sätt positionen
 @till 0, om n>MAXPOS, sätt den till MAXPOS.
 @Parameter: önskad aktuell buffertposition (index), n i texten.
+*/
+setInPos:
+	movq %rdi, %r9
+	movq $0, %r8
+	cmpq $0, %rdi
+	cmovl %r8, %r9
+	cmpq MAXPOS, %rdi
+	cmovg MAXPOS, %r9
+	movq %r9, inindex
+	ret
 
+/*
 outImage:
 @Rutinen ska skriva ut strängen som ligger i utbufferten i terminalen. Om någon av de
 @övriga utdatarutinerna når buffertens slut, så ska ett anrop till outImage göras i dem, så
@@ -106,14 +129,30 @@ putChar:
 @Om bufferten blir full när getChar anropas ska ett anrop till outImage göras, så att man
 @får en tömd utbuffert att jobba vidare mot.
 @Parameter: tecknet som ska läggas i utbufferten (c i texten)
+*/
 
-getOutPos:
+
+
+/*
 @Rutinen ska returnera aktuell buffertposition för utbufferten.
 @Returvärde: aktuell buffertposition (index)
-
-setOutPos:
+*/
+getOutPos:
+	movq outindex, %rax
+	ret
+/*
 @Rutinen ska sätta aktuell buffertposition för utbufferten till n. n måste dock ligga i intervallet
 @[0,MAXPOS], där MAXPOS beror av utbuffertens storlek. Om n<0 sätt den till 0, om
 @n>MAXPOS sätt den till MAXPOS.
 @Parameter: önskad aktuell buffertposition (index), n i texten
 */
+
+setOutPos:
+	movq %rdi, %r9
+	movq $0, %r8
+	cmpq $0, %rdi
+	cmovl %r8, %r9
+	cmpq MAXPOS, %rdi
+	cmovg MAXPOS, %r9
+	movq %r9, outindex
+	ret
