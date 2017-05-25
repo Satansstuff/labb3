@@ -55,8 +55,16 @@ inImage:
 @Returvärde: inläst heltal
 */
 getInt:
+	call getInPos
+	cmp %rax, $0
+	jl toInImage
+	call
+	cmp %rax
+giContinue:
 	
-
+toInImage:
+	call inImage
+	jmp giContinue
 
 
 
