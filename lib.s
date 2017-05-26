@@ -96,6 +96,7 @@ GIBlankStart:
 	call charIsSign
 	cmp $0, %rax
 	je GINumLoop
+	call getCharNoInc
 	cmp $'-', %rax
 	movq $1, %rcx
 	cmoveq %rcx, %rbp
@@ -190,7 +191,7 @@ charIsSign:
 	cmp $'-', %rdi
 	mov $1, %rcx
 	cmoveq %rcx, %rsi
-	orq %rax, %rsi
+	orq %rsi, %rax
 	ret
 
 getCharNoInc:
