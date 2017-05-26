@@ -5,7 +5,7 @@
 
 MAXPOS: .quad 128
 
-debug: .asciz "asd %d\n"
+debug: .asciz "debug %d\n"
 
 inbuffer: .space 128
 outbuffer: .space 128
@@ -21,13 +21,20 @@ outindex: .quad 0
 .global main
 
 main:
-	jmp inImage
+	call inImage
+	call getChar
+	movq %rax, %rsi
+	xorq %rax, %rax
+	movq $debug, %rdi
+	call printf
+	ret
 
 /*
 howto x64
-registers RCX, RDX, R8, R9 for the first four integer or pointer arguments in that order
-registers RAX, RCX, RDX, R8, R9, R10, R11 are considered volatile, scratch
-registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered nonvolatile
+parameters: rdi, rsi, rdx, rcx, r8, r9
+rax: variadic count params
+
+pusha rbp, rbx, r12-r14
 */
 
 
@@ -56,15 +63,146 @@ inImage:
 //returnerar värdet av ett inmatat tal.
 //Returvärde: inläst heltal
 getInt:
+	pushq %rbp
+	pushq %rbx
+GIStart:
+	// check if inindex >= MAXPOS
 	call getInPos
-	cmp  $0,%rax
-	jl toInImage
-giContinue:
-	
-toInImage:
+	movq MAXPOS, %rcx
+	cmpq %rcx, %rax
+	jge GIToInImage
+	// check if inbuffer[inindex] == '\0'
+	call getCharNoInc
+	cmp $0, %rax
+	je GIToInImage
+	// rbx = length of number in characters
+	movq $0, %rbx	
+	jmp GIBlankLoop
+GIToInImage:
 	call inImage
-	jmp giContinue
+	jmp GIStart
+GIBlankLoop:
+	call incrInPos
+GIBlankStart:	
+	call GICheckEnd
+	call getCharNoInc
+	cmp $' ', %rax
+	je GIBlankLoop
+	// rbp = sign, 0 positive, else negative
+	movq $0, %rbp 	
+	call getCharNoInc
+	movq %rax, %rdi
+	call charIsSign
+	cmp $0, %rax
+	je GINumLoop
+	cmp $'-', %rax
+	movq $1, %rbp
+GINumLoop:
+	call incrInPos
+	call GICheckEnd
+	call getCharNoInc
+	movq %rax, %rdi
+	call charIsNum
+	cmp $0, %rax
+	je GIEnd
+	// if number -> push the number to the stack
+	pushq %rax		
+	// Increment number size
+	incq %rbx		
+	jmp GINumLoop
+// use 'call' for this	
+GICheckEnd:
+	call getInPos
+	movq MAXPOS, %rdx
+	cmp %rdx, %rax
+	jge GIEnd
+	call getCharNoInc
+	cmp $'\0', %rax
+	je GIEndPop
+	ret 
+GIEndPop:
+	// pop the return address from 'call GICheckEnd' so getInt returns correctly
+	popq %rdi
+GIEnd:
+// return 0 if no number
+	cmp $0, %rbx 
+	mov $0, %rcx
+	cmove %rcx, %rax
+	je GIReturn
+	// number counter from last
+	movq $0, %rdi 
+GIEndLoop:
+	cmp %rbx, %rdi
+	jge GIReturn
+	// current number char
+	popq %rsi 		
+	// char to number
+	subq $'0', %rsi	
+	// loop counter
+	movq $0, %r8 	
+GITenLoop:
+	cmp %rdi, %r8
+	jge GITenEnd
+	imulq $10, %rsi
+	incq %r8
+	jmp GITenLoop
+GITenEnd:
+	addq %rsi, %rax
+	incq %rdi
+	jmp GIEndLoop
+GIReturn:
+	cmp $0, %rbp
+	je GISkip
+	negq %rax
+GISkip:
+	popq %rbx
+	popq %rbp
+	ret
 
+	
+
+
+// returns 1 if parameter is a number 0-9, else returns 0
+charIsNum:
+	movq $0, %rax
+	movq $0, %rsi
+	cmp $'0', %rdi
+	mov $1, %rcx
+	cmovlq %rcx, %rax
+	cmp $'9', %rdi
+	mov $1, %rcx
+	cmovgq %rcx, %rsi
+	andq %rax, %rsi
+	ret
+	
+	
+// returns 1 if parameter is sign character, else returns 0
+charIsSign:
+	movq $0, %rax
+	movq $0, %rsi
+	cmp $'+', %rdi
+	mov $1, %rcx
+	cmoveq %rcx, %rax
+	cmp $'-', %rdi
+	mov $1, %rcx
+	cmoveq %rcx, %rsi
+	orq %rax, %rsi
+	ret
+
+getCharNoInc:
+	call getInPos
+	leaq inbuffer, %rdi
+	movzbq (%rdi, %rax), %rax
+	ret
+
+
+// Increments inindex by 1
+incrInPos:
+	call getInPos
+	incq %rax
+	movq %rax, %rdi
+	call setInPos
+	ret
 
 
 
@@ -87,10 +225,22 @@ getText:
 //kalla på inImage, så att getChar alltid returnerar ett tecken ur inmatningsbufferten.
 //Returvärde: inläst tecken
 getChar:
-	movq %rax, inindex
-	cmpq %rax, MAXPOS
-	JGE inImage
-	//Hur vet vi hur mycket som finns i bufferten at all times?
+	call getInPos
+	movq MAXPOS, %rcx
+	cmpq %rcx, %rax
+	jge GCToInImage
+	call getCharNoInc
+	cmp $0, %rax
+	je GCToInImage
+	pushq %rax
+	call incrInPos
+	popq %rax
+	ret
+GCToInImage:
+	call inImage
+	jmp getChar
+
+
 
 //Rutinen ska returnera aktuell buffertposition för inbufferten.
 //Returvärde: aktuell buffertposition (index)
@@ -154,3 +304,16 @@ setOutPos:
 	cmovg MAXPOS, %r9
 	movq %r9, outindex
 	ret
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
