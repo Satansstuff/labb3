@@ -22,7 +22,7 @@ outindex: .quad 0
 
 main:
 	call inImage
-	call getChar
+	call getInt
 	movq %rax, %rsi
 	xorq %rax, %rax
 	movq $debug, %rdi
@@ -76,8 +76,10 @@ GIStart:
 	cmp $0, %rax
 	je GIToInImage
 	// rbx = length of number in characters
-	movq $0, %rbx	
-	jmp GIBlankLoop
+	movq $0, %rbx
+	// rbp = sign, 0 positive, else negative
+	movq $0, %rbp 	
+	jmp GIBlankStart
 GIToInImage:
 	call inImage
 	jmp GIStart
@@ -88,34 +90,36 @@ GIBlankStart:
 	call getCharNoInc
 	cmp $' ', %rax
 	je GIBlankLoop
-	// rbp = sign, 0 positive, else negative
-	movq $0, %rbp 	
+// check for sign
 	call getCharNoInc
 	movq %rax, %rdi
 	call charIsSign
 	cmp $0, %rax
 	je GINumLoop
 	cmp $'-', %rax
-	movq $1, %rbp
-GINumLoop:
+	movq $1, %rcx
+	cmoveq %rcx, %rbp
 	call incrInPos
+GINumLoop:
 	call GICheckEnd
 	call getCharNoInc
 	movq %rax, %rdi
 	call charIsNum
 	cmp $0, %rax
 	je GIEnd
-	// if number -> push the number to the stack
+	// if number -> push the char to the stack
+	call getCharNoInc
 	pushq %rax		
 	// Increment number size
 	incq %rbx		
+	call incrInPos
 	jmp GINumLoop
 // use 'call' for this	
 GICheckEnd:
 	call getInPos
 	movq MAXPOS, %rdx
 	cmp %rdx, %rax
-	jge GIEnd
+	jge GIEndPop
 	call getCharNoInc
 	cmp $'\0', %rax
 	je GIEndPop
@@ -168,10 +172,10 @@ charIsNum:
 	movq $0, %rsi
 	cmp $'0', %rdi
 	mov $1, %rcx
-	cmovlq %rcx, %rax
+	cmovgeq %rcx, %rax
 	cmp $'9', %rdi
 	mov $1, %rcx
-	cmovgq %rcx, %rsi
+	cmovleq %rcx, %rsi
 	andq %rax, %rsi
 	ret
 	
