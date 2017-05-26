@@ -266,10 +266,16 @@ setInPos:
 	movq %r9, inindex
 	ret
 
-outImage:
 //Rutinen ska skriva ut strängen som ligger i utbufferten i terminalen. Om någon av de
 //övriga utdatarutinerna når buffertens slut, så ska ett anrop till outImage göras i dem, så
 //att man får en tömd utbuffert att jobba mot.
+outImage:
+	movq outbuffer,%rdi
+	movq $0, %rax
+	call printf
+	movq $0,%rdi
+	call setOutPos
+	ret
 
 putInt:
 //Rutinen ska lägga ut talet n som sträng i utbufferten från och med buffertens aktuella
