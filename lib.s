@@ -21,12 +21,16 @@ outindex: .quad 0
 .global main
 
 main:
-	call inImage
-	call getInt
+	//call inImage
+	/*call getInt
 	movq %rax, %rsi
 	xorq %rax, %rax
 	movq $debug, %rdi
 	call printf
+	*/
+	movq $'c',%rdi
+	call putChar
+	call outImage
 	ret
 
 /*
@@ -270,8 +274,8 @@ setInPos:
 //övriga utdatarutinerna når buffertens slut, så ska ett anrop till outImage göras i dem, så
 //att man får en tömd utbuffert att jobba mot.
 outImage:
-	movq outbuffer,%rdi
-	movq $0, %rax
+	movq $outbuffer,%rdi
+	xorq %rax, %rax
 	call printf
 	movq $0,%rdi
 	call setOutPos
@@ -282,19 +286,34 @@ putInt:
 //position. Glöm inte att uppdatera aktuell position innan rutinen lämnas.
 //Parameter: tal som ska läggas in i bufferten (n i texten)
 
-putText:
 //Rutinen ska lägga textsträngen som finns i buf från och med den aktuella positionen i
 //utbufferten. Glöm inte att uppdatera utbuffertens aktuella position innan rutinen lämnas.
 //Om bufferten blir full så ska ett anrop till outImage göras, så att man får en tömd utbuffert
 //att jobba vidare mot.
 //Parameter: adress som strängen ska hämtas till utbufferten ifrån (buf i texten)
+putText:
+	pushq %r12
+	movq outindex, %r12
+	cmp MAXPOS,%r12
+	jge outImage
 
-putChar:
 //Rutinen ska lägga tecknet c i utbufferten och flytta fram aktuell position i den ett steg.
 //Om bufferten blir full när getChar anropas ska ett anrop till outImage göras, så att man
 //får en tömd utbuffert att jobba vidare mot.
 //Parameter: tecknet som ska läggas i utbufferten (c i texten)
+putChar:
+	pushq %r12
+	movq outindex, %r12
+	cmp MAXPOS,%r12
+	jge outImage
+	movq %rdi, (outbuffer)(,%r12,8)
+	incq outindex
 
+	movq outindex, %r12
+	cmp MAXPOS,%r12
+	jge outImage
+	popq %r12
+	ret
 
 //Rutinen ska returnera aktuell buffertposition för utbufferten.
 //Returvärde: aktuell buffertposition (index)
