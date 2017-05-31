@@ -3,9 +3,12 @@
  Vi behöver två stycken bufrar här. En för inmatning och en för utmatning + ett index
 */
 
-MAXPOS: .quad 128
-
 debug: .asciz "debug %d\n"
+getTextDebug: .space 50
+
+
+
+MAXPOS: .quad 128
 
 inbuffer: .space 128
 outbuffer: .space 128
@@ -21,16 +24,23 @@ outindex: .quad 0
 .global main
 
 main:
-	//call inImage
-	/*call getInt
-	movq %rax, %rsi
+	leaq getTextDebug, %rdi
+	movq $20, %rsi
+	call getText
+	pushq %rax
+	//movq %rax, %rsi
 	xorq %rax, %rax
-	movq $debug, %rdi
+	leaq getTextDebug, %rdi
 	call printf
-	*/
+	xorq %rax, %rax
+	leaq debug, %rdi
+	popq %rsi
+	call printf
+	/*
 	movq $'c',%rdi
 	call putChar
 	call outImage
+	*/
 	ret
 
 /*
@@ -227,6 +237,55 @@ incrInPos:
 //Parameter 2: maximalt antal tecken att läsa från inmatningsbufferten (n i texten)
 //Returvärde: antal överförda tecken
 getText:
+	pushq %rbp
+	pushq %rbx
+	pushq %r12
+	
+	pushq %rdi
+	pushq %rsi
+GTstart:
+	call getInPos
+	movq MAXPOS, %rcx
+	cmpq %rcx, %rax
+	jge GTToInImage
+	call getCharNoInc
+	cmp $0, %rax
+	je GTToInImage
+	// n, from push rsi
+	popq %rbp
+	// address, from push rdi
+	popq %rbx
+	// counter and offset
+	movq $0, %r12
+GTLoop:
+	call getInPos
+	movq MAXPOS, %rdx
+	cmp %rdx, %rax
+	jge GTEnd
+	call getCharNoInc
+	cmp $0, %rax
+	je GTEnd
+	movq %rbp, %rdx
+	decq %rdx
+	cmp %r12, %rdx
+	jle GTEnd
+	call getCharNoInc
+	movb %al, (%rbx, %r12)
+	incq %r12
+	call incrInPos
+	jmp GTLoop
+GTEnd:
+	movb $0, (%rbx, %r12)
+	inc %r12
+	movq %r12, %rax
+	popq %r12
+	popq %rbx
+	popq %rbp
+	ret
+GTToInImage:
+	call inImage
+	jmp GTstart
+
 
 //Rutinen ska returnera ett tecken från inmatningsbuffertens aktuella position och flytta
 //fram aktuell position ett steg i inmatningsbufferten ett steg. Om inmatningsbufferten är
