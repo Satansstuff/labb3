@@ -20,7 +20,7 @@ outindex: .quad 0
 .text
 
 
-
+/*
 .global main
 
 main:
@@ -36,12 +36,8 @@ main:
 	leaq debug, %rdi
 	popq %rsi
 	call printf
-	/*
-	movq $'c',%rdi
-	call putChar
-	call outImage
-	*/
 	ret
+*/	
 
 /*
 howto x64
@@ -57,7 +53,7 @@ pusha rbp, rbx, r12-r14
 //jobba mot den här bufferten. Om inmatningsbufferten är tom eller den aktuella positionen
 //är vid buffertens slut när någon av de andra inläsningsrutinerna nedan anropas ska inImage
 //anropas av den rutinen, så att det alltid finns ny data att arbeta med.
-
+.global inImage
 inImage:
 	movq $inbuffer, %rdi
 	movq MAXPOS, %rsi
@@ -76,6 +72,7 @@ inImage:
 //är vid dess slut vid anrop av getInt ska getInt kalla på inImage, så att getInt alltid
 //returnerar värdet av ett inmatat tal.
 //Returvärde: inläst heltal
+.global getInt
 getInt:
 	pushq %rbp
 	pushq %rbx
@@ -236,6 +233,7 @@ incrInPos:
 //(buf i texten)
 //Parameter 2: maximalt antal tecken att läsa från inmatningsbufferten (n i texten)
 //Returvärde: antal överförda tecken
+.global getText
 getText:
 	pushq %rbp
 	pushq %rbx
@@ -292,6 +290,7 @@ GTToInImage:
 //tom eller aktuell position i den är vid buffertens slut vid anrop av getChar ska getgetChar
 //kalla på inImage, så att getChar alltid returnerar ett tecken ur inmatningsbufferten.
 //Returvärde: inläst tecken
+.global getChar
 getChar:
 	call getInPos
 	movq MAXPOS, %rcx
@@ -312,6 +311,7 @@ GCToInImage:
 
 //Rutinen ska returnera aktuell buffertposition för inbufferten.
 //Returvärde: aktuell buffertposition (index)
+.global getInPos
 getInPos:
 	movq inindex, %rax
 	ret
@@ -319,6 +319,7 @@ getInPos:
 //[0,MAXPOS], där MAXPOS beror av buffertens faktiska storlek. Om n<0, sätt positionen
 //till 0, om n>MAXPOS, sätt den till MAXPOS.
 //Parameter: önskad aktuell buffertposition (index), n i texten.
+.global setInPos
 setInPos:
 	movq %rdi, %r9
 	movq $0, %r8
@@ -332,6 +333,7 @@ setInPos:
 //Rutinen ska skriva ut strängen som ligger i utbufferten i terminalen. Om någon av de
 //övriga utdatarutinerna når buffertens slut, så ska ett anrop till outImage göras i dem, så
 //att man får en tömd utbuffert att jobba mot.
+.global outImage
 outImage:
 	movq $outbuffer,%rdi
 	xorq %rax, %rax
@@ -340,6 +342,7 @@ outImage:
 	call setOutPos
 	ret
 
+.global putInt
 putInt:
 //Rutinen ska lägga ut talet n som sträng i utbufferten från och med buffertens aktuella
 //position. Glöm inte att uppdatera aktuell position innan rutinen lämnas.
@@ -350,6 +353,7 @@ putInt:
 //Om bufferten blir full så ska ett anrop till outImage göras, så att man får en tömd utbuffert
 //att jobba vidare mot.
 //Parameter: adress som strängen ska hämtas till utbufferten ifrån (buf i texten)
+.global putText
 putText:
 	pushq %r12
 	movq outindex, %r12
@@ -360,6 +364,7 @@ putText:
 //Om bufferten blir full när getChar anropas ska ett anrop till outImage göras, så att man
 //får en tömd utbuffert att jobba vidare mot.
 //Parameter: tecknet som ska läggas i utbufferten (c i texten)
+.global putChar
 putChar:
 	pushq %r12
 	movq outindex, %r12
@@ -376,6 +381,7 @@ putChar:
 
 //Rutinen ska returnera aktuell buffertposition för utbufferten.
 //Returvärde: aktuell buffertposition (index)
+.global getOutPos
 getOutPos:
 	movq outindex, %rax
 	ret
@@ -383,7 +389,7 @@ getOutPos:
 //[0,MAXPOS], där MAXPOS beror av utbuffertens storlek. Om n<0 sätt den till 0, om
 //n>MAXPOS sätt den till MAXPOS.
 //Parameter: önskad aktuell buffertposition (index), n i texten
-
+.global setOutPos
 setOutPos:
 	movq %rdi, %r9
 	movq $0, %r8
