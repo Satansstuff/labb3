@@ -3,7 +3,7 @@
  Vi behöver två stycken bufrar här. En för inmatning och en för utmatning + ett index
 */
 
-debug: .asciz "debug %d\n"
+debug: .asciz "debug\n"
 getTextDebug: .space 50
 
 
@@ -16,15 +16,14 @@ outbuffer: .space 128
 inindex: .quad 0
 outindex: .quad 0
 
-
 .text
 
 
-/*
+
 .global main
 
 main:
-	leaq getTextDebug, %rdi
+	/*leaq getTextDebug, %rdi
 	movq $20, %rsi
 	call getText
 	pushq %rax
@@ -36,8 +35,13 @@ main:
 	leaq debug, %rdi
 	popq %rsi
 	call printf
+	*/
+	movq $debug, %rdi
+	call putText
+	movq $debug, %rdi
+	call putText
+	call outImage
 	ret
-*/	
 
 /*
 howto x64
@@ -343,7 +347,6 @@ outImage:
 	ret
 
 .global putInt
-putInt:
 //Rutinen ska lägga ut talet n som sträng i utbufferten från och med buffertens aktuella
 //position. Glöm inte att uppdatera aktuell position innan rutinen lämnas.
 //Parameter: tal som ska läggas in i bufferten (n i texten)
@@ -353,12 +356,68 @@ putInt:
 //Om bufferten blir full så ska ett anrop till outImage göras, så att man får en tömd utbuffert
 //att jobba vidare mot.
 //Parameter: adress som strängen ska hämtas till utbufferten ifrån (buf i texten)
+putInt:
+
+//Woop Woop
+strlen:
+	//Spara strängen då den kommer försvinna...
+	pushq %rdi
+	//Nollställ al
+	xor	%al, %al
+	//Nollställ rcx
+	xorq %rcx, %rcx
+	//invertera rcx
+	not	%rcx
+	cld
+	//scanna strängen och decrementera tills nullterminator hittas
+	repne scasb
+	//Invertera rcx
+	not	%rcx
+	dec	%rcx
+	mov %rcx, %rax
+	incq %rax
+	popq %rdi
+	ret
+
+
 .global putText
 putText:
-	pushq %r12
-	movq outindex, %r12
-	cmp MAXPOS,%r12
+	//Spara register
+	push %r12
+	push %r11
+	push %r10
+//////////////////////////
+//Får den plats?
+	//Räkna ut längden
+	call strlen
+	movq %rax, %r12
+	//r12 = r12 + outindex
+	addq outindex,%r12
+	cmpq MAXPOS, %r12
 	jge outImage
+////////////////////////
+
+	movq outindex, %r11
+	movq %r12, %r10
+	addq %r12, outindex
+	//r12 = size
+	//rdi = source
+	//rax = dst
+	leaq outbuffer, %rax
+	//rax += %r11
+	addq %r11, %rax
+	cld
+	movq %rdi, %rsi
+	movq %rax, %rdi
+	movq %r12, %rcx
+	rep movsb
+
+	//Pop()
+	popq %r10
+	popq %r11
+	popq %r12
+	ret
+
 
 //Rutinen ska lägga tecknet c i utbufferten och flytta fram aktuell position i den ett steg.
 //Om bufferten blir full när getChar anropas ska ett anrop till outImage göras, så att man
@@ -370,7 +429,7 @@ putChar:
 	movq outindex, %r12
 	cmp MAXPOS,%r12
 	jge outImage
-	movq %rdi, (outbuffer)(,%r12,8)
+	movq %rdi, (outbuffer)(,%r12,1)
 	incq outindex
 
 	movq outindex, %r12
