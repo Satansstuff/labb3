@@ -3,7 +3,8 @@
  Vi behöver två stycken bufrar här. En för inmatning och en för utmatning + ett index
 */
 
-debug: .asciz "debug\n"
+debug: .asciz "debug"
+debug2: .ascii "pa"
 getTextDebug: .space 50
 
 
@@ -18,31 +19,31 @@ outindex: .quad 0
 
 .text
 
-
-
+/*
 .global main
-
 main:
-	/*leaq getTextDebug, %rdi
-	movq $20, %rsi
-	call getText
-	pushq %rax
-	//movq %rax, %rsi
-	xorq %rax, %rax
-	leaq getTextDebug, %rdi
-	call printf
-	xorq %rax, %rax
-	leaq debug, %rdi
-	popq %rsi
-	call printf
-	*/
-	movq $debug, %rdi
-	call putText
-	movq $debug, %rdi
-	call putText
+//	leaq getTextDebug, %rdi
+//	movq $20, %rsi
+//	call getText
+//	pushq %rax
+//	movq %rax, %rsi
+//	xorq %rax, %rax
+//	leaq getTextDebug, %rdi
+//	call printf
+//	xorq %rax, %rax
+//	leaq debug, %rdi
+//	popq %rsi
+//	call printf
+	//movq $debug2, %rdi
+	//call putText
+	//movq $debug, %rdi
+	//call putText
+	//call outImage
+	movq $125, %rdi
+	call putInt
 	call outImage
 	ret
-
+	*/
 /*
 howto x64
 parameters: rdi, rsi, rdx, rcx, r8, r9
@@ -340,10 +341,57 @@ setInPos:
 .global outImage
 outImage:
 	movq $outbuffer,%rdi
-	xorq %rax, %rax
-	call printf
+	call puts
 	movq $0,%rdi
 	call setOutPos
+	ret
+
+//Låt oss ful-hacka lite
+//Guis pls, fixa en cmov som tar imm värden <3
+//TODO, returnerar inte rätt
+intLength:
+	movq $1, %rax
+
+
+	movq $10, %rdx
+	movq $2, %rdx
+	cmpq $10, %rdi
+	cmovge %rdx, %rax
+	movq $3, %rdx
+	cmpq $100, %rdi
+	cmovge %rdx, %rax
+	movq $4, %rdx
+	cmpq $1000, %rdi
+	cmovge %rdx, %rax
+	movq $5, %rdx
+	cmpq $10000, %rdi
+	cmovge %rdx, %rax
+	movq $6, %rdx
+	cmpq $100000, %rdi
+	cmovge %rdx, %rax
+	movq $7, %rdx
+	cmpq $1000000, %rdi
+	cmovge %rdx, %rax
+	movq $8, %rdx
+	cmpq $10000000, %rdi
+	cmovge %rdx, %rax
+	movq $9, %rdx
+	cmpq $100000000, %rdi
+	cmovge %rdx, %rax
+	cmpq $1000000000, %rdi
+	cmovge %rdx, %rax
+	ret
+
+abs:
+	cmpq $0, %rdi
+	jl leq
+	jge grtr
+leq:
+	movq %rdi, %rax
+	neg %rax
+	ret
+grtr:
+	movq %rdi, %rax
 	ret
 
 .global putInt
@@ -356,7 +404,55 @@ outImage:
 //Om bufferten blir full så ska ett anrop till outImage göras, så att man får en tömd utbuffert
 //att jobba vidare mot.
 //Parameter: adress som strängen ska hämtas till utbufferten ifrån (buf i texten)
+
 putInt:
+	//r11 = length
+	//r12 = int
+	pushq %r11
+	pushq %r12
+
+
+	movq %rdi, %r12
+	cmpq $0, %r12
+	jge .nope
+.incr:
+	movq $'-', %rbx
+	movq outindex, %rax
+	movq %rbx, (outbuffer)(,%rax,1)
+	incq outindex
+.nope:
+	call abs
+	movq %rax, %rdi
+	call intLength
+	movq %rax, %r11
+	addq outindex, %rax
+	cmpq MAXPOS,%rax
+	jl .not
+	call outImage
+.not:
+	movq %r12, %rax
+	movq $10, %rcx
+divLoop:
+	xorq %rdx, %rdx
+	idiv %rcx
+
+	add $48, %rdx
+	pushq %rdx
+	cmpq $0, %rax
+	jne divLoop
+.insert:
+	cmp $0, %r11
+	jle .done
+	decq %r11
+	popq %rax
+	movq outindex, %r12
+	movq %rax, (outbuffer)(,%r12,1)
+	incq outindex
+	jne .insert
+.done:
+	pop %r12
+	pop %r11
+	ret
 
 //Woop Woop
 strlen:
@@ -371,11 +467,9 @@ strlen:
 	cld
 	//scanna strängen och decrementera tills nullterminator hittas
 	repne scasb
-	//Invertera rcx
+	//Invertera tbx rcx
 	not	%rcx
-	dec	%rcx
 	mov %rcx, %rax
-	incq %rax
 	popq %rdi
 	ret
 
