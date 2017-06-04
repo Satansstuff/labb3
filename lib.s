@@ -423,6 +423,7 @@ putInt:
 	call abs
 	movq %rax, %r12
 .nope:
+	movq %rax, %r12
 	movq %rax, %rdi
 	call intLength
 	movq %rax, %r11
