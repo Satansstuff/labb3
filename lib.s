@@ -12,7 +12,7 @@ getTextDebug: .space 50
 MAXPOS: .quad 128
 
 inbuffer: .space 128
-outbuffer: .space 128
+outbuffer: .space 129
 
 inindex: .quad 0
 outindex: .quad 0
@@ -347,6 +347,9 @@ setInPos:
 outImage:
 	movq $outbuffer,%rdi
 	call puts
+	xorq %rdi, %rdi
+	xorq %rax, %rax
+	call fflush
 	movq $0,%rdi
 	call setOutPos
 	ret
@@ -457,6 +460,9 @@ divLoop:
 	incq outindex
 	jne .insert
 .done:
+	movq outindex, %r12
+	incq %r12
+	movq %rax, (outbuffer)(,%r12,1)
 	pop %r12
 	pop %r11
 	ret
@@ -517,6 +523,7 @@ putText:
 	popq %r10
 	popq %r11
 	popq %r12
+	decq outindex
 	ret
 
 
@@ -532,7 +539,8 @@ putChar:
 	jge outImage
 	movq %rdi, (outbuffer)(,%r12,1)
 	incq outindex
-
+	incq %r12
+	movq $'\0', (outbuffer)(,%r12,1)
 	movq outindex, %r12
 	cmp MAXPOS,%r12
 	jge outImage
