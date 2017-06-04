@@ -106,6 +106,10 @@ GIBlankStart:
 	call getCharNoInc
 	cmp $' ', %rax
 	je GIBlankLoop
+	cmp $'\n', %rax
+	je GIBlankLoop
+	cmp $'\t', %rax
+	je GIBlankLoop
 // check for sign
 	call getCharNoInc
 	movq %rax, %rdi
