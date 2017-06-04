@@ -421,10 +421,10 @@ putInt:
 	movq %rbx, (outbuffer)(,%rax,1)
 	incq outindex
 	call abs
-	movq %rax, %r12
-.nope:
-	movq %rax, %r12
+	movq %rdi, %r12
 	movq %rax, %rdi
+.nope:
+	movq %rdi, %r12
 	call intLength
 	movq %rax, %r11
 	addq outindex, %rax
