@@ -101,8 +101,9 @@ GIToInImage:
 	jmp GIStart
 GIBlankLoop:
 	call incrInPos
-GIBlankStart:	
-	call GICheckEnd
+GIBlankStart:
+	jmp GICheckBlankEnd
+GIBlankCont:
 	call getCharNoInc
 	cmp $' ', %rax
 	je GIBlankLoop
@@ -135,7 +136,16 @@ GINumLoop:
 	incq %rbx		
 	call incrInPos
 	jmp GINumLoop
-// use 'call' for this	
+GICheckBlankEnd:
+	call getInPos
+	movq MAXPOS, %rdx
+	cmp %rdx, %rax
+	jge GIToInImage
+	call getCharNoInc
+	cmp $0, %rax
+	je GIToInImage
+	jmp GIBlankCont
+// use 'call' for this
 GICheckEnd:
 	call getInPos
 	movq MAXPOS, %rdx
