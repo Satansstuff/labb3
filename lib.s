@@ -20,8 +20,8 @@ outindex: .quad 0
 .text
 
 /*
-.global main
-main:
+//.global main
+//main:
 //	leaq getTextDebug, %rdi
 //	movq $20, %rsi
 //	call getText
@@ -138,7 +138,7 @@ GICheckEnd:
 	cmp %rdx, %rax
 	jge GIEndPop
 	call getCharNoInc
-	cmp $'\0', %rax
+	cmp $0, %rax
 	je GIEndPop
 	ret 
 GIEndPop:
@@ -176,6 +176,9 @@ GIReturn:
 	je GISkip
 	negq %rax
 GISkip:
+	cmpq $0, %rbx
+	movq $0, %rcx
+	cmove %rcx, %rax
 	popq %rbx
 	popq %rbp
 	ret
@@ -184,20 +187,22 @@ GISkip:
 
 
 // returns 1 if parameter is a number 0-9, else returns 0
+.global charIsNum
 charIsNum:
 	movq $0, %rax
 	movq $0, %rsi
-	cmp $'0', %rdi
-	mov $1, %rcx
+	cmpb $'0', %dil
+	movq $1, %rcx
 	cmovgeq %rcx, %rax
-	cmp $'9', %rdi
-	mov $1, %rcx
+	cmpb $'9', %dil
+	movq $1, %rcx
 	cmovleq %rcx, %rsi
-	andq %rax, %rsi
+	andq %rsi, %rax
 	ret
 	
 	
 // returns 1 if parameter is sign character, else returns 0
+.global charIsSign
 charIsSign:
 	movq $0, %rax
 	movq $0, %rsi
